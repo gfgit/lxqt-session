@@ -32,14 +32,40 @@
 #include <QRect>
 #include <QScreen>
 
-LeaveDialog::LeaveDialog(QWidget* parent)
-    : QDialog(parent, Qt::Dialog | Qt::WindowStaysOnTopHint | Qt::CustomizeWindowHint),
-    ui(new Ui::LeaveDialog),
+LeaveDialog::LeaveDialog(QWidget* parent) :
+    QDialog(parent, Qt::Dialog | Qt::WindowMinMaxButtonsHint),
+    //ui(new Ui::LeaveDialog),
     mPower(new LXQt::Power(this)),
     mPowerManager(new LXQt::PowerManager(this)),
     mScreensaver(new LXQt::ScreenSaver(this))
 {
-    ui->setupUi(this);
+    //ui->setupUi(this);
+    mLabel = new QLabel(tr("What do you want computer to do?"));
+    mLabel->setWordWrap(true);
+
+    mListView = new ListWidget;
+    mListView->setModel(new LeaveActionModel(mPower, this)); //TODO: make member, delete mPower
+    mListView->setFrameShape(QFrame::NoFrame);
+    mListView->setViewMode(QListView::IconMode);
+    int sz = 2 * style()->pixelMetric(QStyle::PM_LargeIconSize);
+    mListView->setIconSize(QSize(sz, sz));
+    mListView->setSelectionMode(QListView::NoSelection);
+    mListView->setEditTriggers(QListView::NoEditTriggers);
+    mListView->setResizeMode(QListView::Adjust);
+    mListView->setTabKeyNavigation(true);
+    mListView->setTextElideMode(Qt::ElideNone);
+    mListView->setFlow(QListView::LeftToRight);
+    mListView->setWrapping(true);
+    mListView->setSpacing(7);
+    mListView->setUniformItemSizes(true);
+    mListView->setItemAlignment(Qt::AlignRight);
+
+    mCancelButton = new QPushButton(tr("Cancel"));
+
+    QVBoxLayout *lay = new QVBoxLayout(this);
+    lay->addWidget(mLabel);
+    lay->addWidget(mListView);
+    lay->addWidget(mCancelButton);
 
     /* This is a special dialog. We want to make it hard to ignore.
        We make it:
@@ -48,8 +74,8 @@ LeaveDialog::LeaveDialog(QWidget* parent)
            * Stays on top of all other windows
            * Present in all desktops
     */
-    setWindowFlags((Qt::CustomizeWindowHint | Qt::FramelessWindowHint |
-                    Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint));
+    //setWindowFlags((Qt::CustomizeWindowHint | Qt::FramelessWindowHint |
+    //                Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint));
 
     // populate the items
     QListWidgetItem * item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-log-out")), tr("Logout")};
@@ -84,7 +110,7 @@ LeaveDialog::LeaveDialog(QWidget* parent)
     ui->listWidget->setRows(2);
     ui->listWidget->setColumns(3);
 
-    connect(ui->listWidget, &QAbstractItemView::activated, this, [this] (const QModelIndex & index) {
+    connect(mListView, &QAbstractItemView::activated, this, &LeaveDialog::doAction);
         bool ok = false;
         const int action = index.data(Qt::UserRole).toInt(&ok);
         if (!ok)
@@ -120,10 +146,11 @@ LeaveDialog::LeaveDialog(QWidget* parent)
                 break;
         }
     });
-    connect(ui->cancelButton, &QAbstractButton::clicked, this, [this] { close(); });
+    connect(mCancelButton, &QAbstractButton::clicked, this, [this] { close(); });
 }
 
 LeaveDialog::~LeaveDialog()
 {
     delete ui;
+    //delete ui;
 }

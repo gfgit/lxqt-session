@@ -11,10 +11,6 @@ set(H_FILES
     listwidget.h
 )
 
-set(UI_FILES
-    leavedialog.ui
-)
-
 
 # Translations **********************************
 lxqt_translate_desktop(DESKTOP_FILES
@@ -34,7 +30,6 @@ lxqt_translate_ts(lxqt-leave_QM_FILES
         ${UPDATE_TRANSLATIONS}
     SOURCES
         ${CPP_FILES}
-        ${UI_FILES}
         ${H_FILES}
     INSTALL_DIR
         "${LXQT_TRANSLATIONS_DIR}/${PROJECT_NAME}"

@@ -47,6 +47,9 @@ public:
     explicit LeaveDialog(QWidget *parent = nullptr);
     ~LeaveDialog() override;
 
+private slots:
+    void doAction(const QModelIndex& idx);
+
 private:
     Ui::LeaveDialog *ui;
     // LXQt::Power is used to know if the actions are doable, while
