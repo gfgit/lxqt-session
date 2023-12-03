@@ -127,7 +127,8 @@ int main(int argc, char *argv[])
 
     LeaveDialog dialog;
     a.setActivationWindow(&dialog);
-    dialog.setFixedSize(dialog.sizeHint());
+    //dialog.setFixedSize(dialog.sizeHint());
+    dialog.showMaximized();
 
     return dialog.exec();
 }
