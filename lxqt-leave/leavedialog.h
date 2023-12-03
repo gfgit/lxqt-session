@@ -28,12 +28,16 @@
 #ifndef LEAVEDIALOG_H
 #define LEAVEDIALOG_H
 
-#include "ui_leavedialog.h"
+//#include "ui_leavedialog.h"
 
 #include <QDialog>
 #include <LXQt/Power>
 #include <LXQt/PowerManager>
 #include <LXQt/ScreenSaver>
+
+class QLabel;
+class QPushButton;
+class ListWidget;
 
 namespace Ui {
     class LeaveDialog;
@@ -51,13 +55,17 @@ private slots:
     void doAction(const QModelIndex& idx);
 
 private:
-    Ui::LeaveDialog *ui;
+    //Ui::LeaveDialog *ui;
     // LXQt::Power is used to know if the actions are doable, while
     // LXQt::PowerManager is used to trigger the actions, while
     // obeying the user option to ask or not for confirmation
     LXQt::Power *mPower;
     LXQt::PowerManager *mPowerManager;
     LXQt::ScreenSaver *mScreensaver;
+
+    QLabel *mLabel;
+    ListWidget *mListView;
+    QPushButton *mCancelButton;
 };
 
 

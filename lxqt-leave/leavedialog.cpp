@@ -26,11 +26,110 @@
  * END_COMMON_COPYRIGHT_HEADER */
 
 #include "leavedialog.h"
+#include "listwidget.h"
 
-#include <QListWidgetItem>
+#include <QLabel>
+#include <QPushButton>
+#include <QVBoxLayout>
 #include <QGuiApplication>
 #include <QRect>
 #include <QScreen>
+
+class LeaveActionModel : public QAbstractListModel
+{
+private:
+    enum Row
+    {
+        Logout = 0,
+        Shutdown,
+        Suspend,
+        LockScreen,
+        Reboot,
+        Hibernate,
+        NRows
+    };
+
+    struct Item
+    {
+        QIcon icon;
+        QString title;
+        LXQt::Power::Action action;
+    };
+    Item items[NRows];
+
+    LXQt::Power *mPower = nullptr;
+
+
+public:
+    LeaveActionModel(LXQt::Power *power, QObject *parent) :
+        QAbstractListModel(parent),
+        mPower(power)
+    {
+        // Populate the items
+        items[Logout]     = {QIcon::fromTheme(QStringLiteral("system-log-out")),
+                             tr("Logout"),
+                             LXQt::Power::PowerLogout};
+        items[Shutdown]   = {QIcon::fromTheme(QStringLiteral("system-shutdown")),
+                             tr("Shutdown"),
+                             LXQt::Power::PowerShutdown};
+        items[Suspend]    = {QIcon::fromTheme(QStringLiteral("system-suspend")),
+                             tr("Suspend"),
+                             LXQt::Power::PowerSuspend};
+        items[LockScreen] = {QIcon::fromTheme(QStringLiteral("system-lock-screen")),
+                             tr("Lock screen"),
+                             LXQt::Power::Action(-1)};
+        items[Reboot]     = {QIcon::fromTheme(QStringLiteral("system-reboot")),
+                             tr("Reboot"),
+                             LXQt::Power::PowerReboot};
+        items[Hibernate]  = {QIcon::fromTheme(QStringLiteral("system-suspend-hibernate")),
+                             tr("Hibernate"),
+                             LXQt::Power::PowerHibernate};
+    }
+
+    int rowCount(const QModelIndex &p) const override
+    {
+        return p.isValid() ? 0 : NRows;
+    }
+
+    QVariant data(const QModelIndex &idx, int role) const override
+    {
+        if(idx.row() >= NRows)
+            return QVariant();
+
+        switch (role)
+        {
+        case Qt::DisplayRole:
+        case Qt::ToolTipRole:
+            return items[idx.row()].title;
+        case Qt::DecorationRole:
+            return items[idx.row()].icon;
+        case Qt::UserRole:
+            return int(items[idx.row()].action);
+        default:
+            break;
+        }
+
+        return QVariant();
+    }
+
+    Qt::ItemFlags flags(const QModelIndex &idx) const override
+    {
+        if(idx.row() >= NRows)
+            return Qt::NoItemFlags;
+
+        LXQt::Power::Action action = items[idx.row()].action;
+        bool canAction = true;
+        if(action != -1)
+            canAction = mPower->canAction(action);
+
+        Qt::ItemFlags f = Qt::ItemIsSelectable;
+        if(canAction)
+            f.setFlag(Qt::ItemIsEnabled);
+        return f;
+    }
+};
+
+
 
 LeaveDialog::LeaveDialog(QWidget* parent) :
     QDialog(parent, Qt::Dialog | Qt::WindowMinMaxButtonsHint),
@@ -77,80 +176,52 @@ LeaveDialog::LeaveDialog(QWidget* parent) :
     //setWindowFlags((Qt::CustomizeWindowHint | Qt::FramelessWindowHint |
     //                Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint));
 
-    // populate the items
-    QListWidgetItem * item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-log-out")), tr("Logout")};
-    item->setData(Qt::UserRole, LXQt::Power::PowerLogout);
-    if (!mPower->canAction(LXQt::Power::PowerLogout))
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-    ui->listWidget->addItem(item);
-    item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-shutdown")), tr("Shutdown")};
-    item->setData(Qt::UserRole, LXQt::Power::PowerShutdown);
-    if (!mPower->canAction(LXQt::Power::PowerShutdown))
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-    ui->listWidget->addItem(item);
-    item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-suspend")), tr("Suspend")};
-    item->setData(Qt::UserRole, LXQt::Power::PowerSuspend);
-    if (!mPower->canAction(LXQt::Power::PowerSuspend))
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-    ui->listWidget->addItem(item);
-    item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-lock-screen")), tr("Lock screen")};
-    item->setData(Qt::UserRole, -1);
-    ui->listWidget->addItem(item);
-    item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-reboot")), tr("Reboot")};
-    item->setData(Qt::UserRole, LXQt::Power::PowerReboot);
-    if (!mPower->canAction(LXQt::Power::PowerReboot))
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-    ui->listWidget->addItem(item);
-    item = new QListWidgetItem{QIcon::fromTheme(QStringLiteral("system-suspend-hibernate")), tr("Hibernate")};
-    item->setData(Qt::UserRole, LXQt::Power::PowerHibernate);
-    if (!mPower->canAction(LXQt::Power::PowerHibernate))
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-    ui->listWidget->addItem(item);
-
-    ui->listWidget->setRows(2);
-    ui->listWidget->setColumns(3);
+    //ui->listWidget->setRows(2);
+    //ui->listWidget->setColumns(3);
 
     connect(mListView, &QAbstractItemView::activated, this, &LeaveDialog::doAction);
-        bool ok = false;
-        const int action = index.data(Qt::UserRole).toInt(&ok);
-        if (!ok)
-        {
-            qWarning("Invalid internal logic, no UserRole set!?");
-            return;
-        }
-        close();
-        switch (action)
-        {
-        case LXQt::Power::PowerLogout:
-                mPowerManager->logout();
-                break;
-            case LXQt::Power::PowerShutdown:
-                mPowerManager->shutdown();
-                break;
-            case LXQt::Power::PowerSuspend:
-                mPowerManager->suspend();
-                break;
-            case -1:
-                {
-                    QEventLoop loop;
-                    connect(mScreensaver, &LXQt::ScreenSaver::done, &loop, &QEventLoop::quit);
-                    mScreensaver->lockScreen();
-                    loop.exec();
-                }
-                break;
-            case LXQt::Power::PowerReboot:
-                mPowerManager->reboot();
-                break;
-            case LXQt::Power::PowerHibernate:
-                mPowerManager->hibernate();
-                break;
-        }
-    });
     connect(mCancelButton, &QAbstractButton::clicked, this, [this] { close(); });
 }
 
 LeaveDialog::~LeaveDialog()
 {
-    delete ui;
     //delete ui;
+}
+
+void LeaveDialog::doAction(const QModelIndex &idx)
+{
+    bool ok = false;
+    const int action = idx.data(Qt::UserRole).toInt(&ok);
+    if (!ok)
+    {
+        qWarning("Invalid internal logic, no UserRole set!?");
+        return;
+    }
+    close();
+    switch (action)
+    {
+    case LXQt::Power::PowerLogout:
+        mPowerManager->logout();
+        break;
+    case LXQt::Power::PowerShutdown:
+        mPowerManager->shutdown();
+        break;
+    case LXQt::Power::PowerSuspend:
+        mPowerManager->suspend();
+        break;
+    case -1:
+    {
+        QEventLoop loop;
+        connect(mScreensaver, &LXQt::ScreenSaver::done, &loop, &QEventLoop::quit);
+        mScreensaver->lockScreen();
+        loop.exec();
+    }
+    break;
+    case LXQt::Power::PowerReboot:
+        mPowerManager->reboot();
+        break;
+    case LXQt::Power::PowerHibernate:
+        mPowerManager->hibernate();
+        break;
+    }
 }
