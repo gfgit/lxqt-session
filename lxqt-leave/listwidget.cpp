@@ -118,9 +118,7 @@ private:
 constexpr QMargins ItemDelegate::MARGINS;
 
 ListWidget::ListWidget(QWidget * parent/* = nullptr*/)
-    : QListWidget{parent}
-    , mRows(3)
-    , mColumns(3)
+    : QListView{parent}
 {
     ItemDelegate * delegate = new ItemDelegate{this};
     {
@@ -129,26 +127,19 @@ ListWidget::ListWidget(QWidget * parent/* = nullptr*/)
     }
 }
 
-void ListWidget::setRows(int rows)
-{
-    mRows = rows;
-}
-
-void ListWidget::setColumns(int columns)
-{
-    mColumns = columns;
-}
-
-QSize ListWidget::viewportSizeHint() const
-{
-    QSize size = sizeHintForIndex(model()->index(0, 0));
-    size.rwidth() = size.width() * mColumns + spacing() * mColumns * 2 + 1;
-    size.rheight() = size.height() * mRows + spacing() * mRows * 2 + 1;
-    return size;
-}
+//QSize ListWidget::viewportSizeHint() const
+//{
+//    QSize size = sizeHintForIndex(model()->index(0, 0));
+//    size.rwidth() = size.width() * mColumns + spacing() * mColumns * 2 + 1;
+//    size.rheight() = size.height() * mRows + spacing() * mRows * 2 + 1;
+//    return size;
+//}
 
 QModelIndex ListWidget::moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers/* modifiers*/)
 {
+    if(cursorAction != MoveNext && cursorAction != MovePrevious)
+        return QListView::moveCursor(cursorAction, Qt::KeyboardModifier());
+
     QModelIndex index = currentIndex();
     int count = model()->rowCount(rootIndex());
     int current = 0;
@@ -168,38 +159,16 @@ QModelIndex ListWidget::moveCursor(CursorAction cursorAction, Qt::KeyboardModifi
         int next = 0;
         switch (cursorAction)
         {
-            case MoveUp:
-            case MovePageUp:
-                next = (current - mColumns) % count;
-                break;
-            case MoveDown:
-            case MovePageDown:
-                next = (current + mColumns) % count;
-                break;
-            case MoveLeft:
-                if (0 == (current % mColumns))
-                    current += mColumns;
-                // fall through
-            case MovePrevious:
-                if (current == 0)
-                    return QModelIndex{};
-                next = (current - 1) % count;
-                break;
-            case MoveRight:
-                if ((mColumns - 1) == (current % mColumns))
-                    current -= mColumns;
-                // fall through
-            case MoveNext:
-                if (current == count - 1)
-                    return QModelIndex{};
-                next = (current + 1) % count;
-                break;
-            case MoveHome:
-                next = 0;
-                break;
-            case MoveEnd:
-                next = count - 1;
-                break;
+        case MovePrevious:
+            if (current == 0)
+                return QModelIndex{};
+            next = (current - 1) % count;
+            break;
+        case MoveNext:
+            if (current == count - 1)
+                return QModelIndex{};
+            next = (current + 1) % count;
+            break;
         }
         if (next < 0)
             next += count;
@@ -208,7 +177,6 @@ QModelIndex ListWidget::moveCursor(CursorAction cursorAction, Qt::KeyboardModifi
         current = next;
     }
     return index;
-
 }
 
 void ListWidget::keyPressEvent(QKeyEvent * event)
@@ -217,11 +185,11 @@ void ListWidget::keyPressEvent(QKeyEvent * event)
     {
         // mimic the "enter" to fire activated
         QKeyEvent k{event->type(), Qt::Key_Enter, event->modifiers(), event->text(), event->isAutoRepeat(), static_cast<ushort>(event->count())};
-        QListWidget::keyPressEvent(&k);
+        QListView::keyPressEvent(&k);
         event->setAccepted(k.isAccepted());
         return;
     }
-    return QListWidget::keyPressEvent(event);
+    return QListView::keyPressEvent(event);
 }
 
 void ListWidget::focusInEvent(QFocusEvent * event)
@@ -237,5 +205,5 @@ void ListWidget::focusInEvent(QFocusEvent * event)
         default:
             break;
     }
-    return QListWidget::focusInEvent(event);
+    return QListView::focusInEvent(event);
 }

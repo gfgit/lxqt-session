@@ -25,7 +25,7 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include <QListWidget>
+#include <QListView>
 
 /*!
  * Single purpose QListWidget with unified item sizes (based on the
@@ -33,20 +33,14 @@
  *
  * \note It expects that items aren't ever changed after show().
  */
-class ListWidget : public QListWidget
+class ListWidget : public QListView
 {
 public:
     ListWidget(QWidget * parent = nullptr);
-    void setRows(int rows);
-    void setColumns(int columns);
 
 protected:
-    QSize viewportSizeHint() const override;
+    //QSize viewportSizeHint() const override;
     QModelIndex moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override;
     void keyPressEvent(QKeyEvent * event) override;
     void focusInEvent(QFocusEvent * event) override;
-
-private:
-    int mRows;
-    int mColumns;
 };
