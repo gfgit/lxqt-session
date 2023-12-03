@@ -37,10 +37,26 @@
 
 #include "leavedialog.h"
 
+class ProxyStyle: public QProxyStyle {
+    Q_OBJECT
+public:
+    ProxyStyle() : QProxyStyle() {}
+    virtual ~ProxyStyle() {}
+    virtual int styleHint(StyleHint hint, const QStyleOption* option = nullptr, const QWidget* widget = nullptr, QStyleHintReturn* returnData = nullptr) const;
+};
+
+int ProxyStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const
+{
+    if(hint == QStyle::SH_ItemView_ActivateItemOnSingleClick)
+        return true;
+    return QProxyStyle::styleHint(hint, option, widget, returnData);
+}
+
 int main(int argc, char *argv[])
 {
     LXQt::SingleApplication a(argc, argv);
     a.setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+    a.setStyle(new ProxyStyle);
 
     LXQt::Translator::translateApplication();
 
@@ -115,3 +131,5 @@ int main(int argc, char *argv[])
 
     return dialog.exec();
 }
+
+#include "main.moc"
